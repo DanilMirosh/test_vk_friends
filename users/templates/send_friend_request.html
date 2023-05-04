@@ -1,10 +1,9 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-    <h2>Send Friend Request</h2>
-    <form method="post">
-        {% csrf_token %}
-        <p>Are you sure you want to send a friend request to {{ friend.get_full_name }}?</p>
-        <button type="submit">Send Friend Request</button>
-    </form>
+<h1>Отправить заявку в друзья</h1>
+<form method="post">
+{% csrf_token %}
+<input type="submit" value="Отправить заявку">
+</form>
 {% endblock %}

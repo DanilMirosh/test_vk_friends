@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Мои друзья</h1>
+{% if friends %}
+<ul>
+{% for friend in friends %}
+<li>{{ friend.username }} <a href="{% url 'remove_friend' friend.id %}">Удалить из друзей</a></li>
+{% endfor %}
+</ul>
+{% else %}
+<p>У вас нет друзей.</p>
+{% endif %}
+{% endblock %}
