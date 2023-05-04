@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1>Friend List</h1>
+  {% if friends %}
+    <h2>Friends</h2>
+    <ul>
+      {% for friend in friends %}
+        <li>{{ friend.username }} (<a href="{% url 'remove_friend' friend.id %}">remove</a>)</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>You have no friends yet.</p>
+  {% endif %}
+
+  {% if incoming_requests %}
+    <h2>Incoming Friend Requests</h2>
+    <ul>
+      {% for request in incoming_requests %}
+        <li>{{ request.from_user.username }} (<a href="{% url 'friend_request_decision' request.id %}?decision=accept">accept</a> / <a href="{% url 'friend_request_decision' request.id %}?decision=reject">reject</a>)</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if outgoing_requests %}
+    <h2>Outgoing Friend Requests</h2>
+    <ul>
+      {% for request in outgoing_requests %}
+        <li>{{ request.to_user.username }} (pending)</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
