@@ -1,26 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings
 
 
 class User(AbstractUser):
     pass
 
 
-class FriendshipRequest(models.Model):
-    """ Содержит информацию о запросах на дружбу между пользователями"""
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship_requests_sent')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship_requests_received')
-    STATUS_CHOICES = [
-        ('P', 'Pending'),
-        ('A', 'Accepted'),
-        ('R', 'Rejected'),
-    ]
-    status = models.CharField(max_length=1, choices=STATUS_CHOICES)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-
 class Friendship(models.Model):
-    """Содержит информацию о друзьях пользователей"""
-    user1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships1')
-    user2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships2')
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    )
+    user1 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user1_friends')
+    user2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user2_friends')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
