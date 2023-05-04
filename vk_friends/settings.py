@@ -6,7 +6,7 @@ SECRET_KEY = 'django-insecure-u2v(s&hj3r21acd=71r_m*go--ul43m&_h3!=t9ciz=l)##qyd
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -69,6 +69,8 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+AUTH_USER_MODEL = 'users.user'
 
 LANGUAGE_CODE = 'en-us'
 
