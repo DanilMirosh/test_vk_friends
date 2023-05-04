@@ -28,7 +28,7 @@ def send_friend_request(request, friend_id):
         return redirect('home')
     friendship, created = Friendship.objects.get_or_create(user1=request.user, user2=friend)
     if not created and friendship.status != 'rejected':
-        messages.error(request, 'You have already sent a friend request to this user.')
+        messages.error(request, 'You have already sent a friend request to this users.')
         return redirect('home')
     messages.success(request, 'Friend request sent to {}.'.format(friend.get_full_name()))
     return redirect('home')
