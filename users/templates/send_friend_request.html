@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-
-{% block content %}
-<h1>Отправить заявку в друзья</h1>
-<form method="post">
-{% csrf_token %}
-<input type="submit" value="Отправить заявку">
-</form>
-{% endblock %}
