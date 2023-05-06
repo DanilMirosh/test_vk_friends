@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'users',
 ]
 
@@ -71,7 +72,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = 'users.user'
+AUTH_USER_MODEL = 'users.User'
 
 LANGUAGE_CODE = 'ru-ru'
 
