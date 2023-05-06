@@ -1,10 +1,11 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
+from django.urls import reverse
 from rest_framework import serializers
 from rest_framework.exceptions import (AuthenticationFailed, ValidationError)
 
-from .models import User
+from .models import User, FriendRequest
 
 
 class PasswordField(serializers.CharField):
@@ -34,8 +35,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data: dict) -> User:
-        """Метод удаляет значение поля [password_repeat], хэширует пароль и создает пользователя"""
-
+        """Проверяет, что пользователь с таким именем уже не существует"""
+        if User.objects.filter(username=validated_data['username']).exists():
+            raise serializers.ValidationError({'username': 'This username is already taken.'})
         del validated_data['password_repeat']
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
@@ -51,14 +53,19 @@ class LoginSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'password', 'first_name', 'last_name', 'email')
         read_only_fields = ('id', 'first_name', 'last_name', 'email')
 
-    def create(self, validated_data: dict) -> User:
+    def validate(self, data):
         """Метод проводит аутентификацию пользователя"""
+        username = data.get('username')
+        password = data.get('password')
+
         if not (user := authenticate(
-                username=validated_data['username'],
-                password=validated_data['password'],
+                username=username,
+                password=password,
         )):
-            raise AuthenticationFailed
-        return user
+            raise AuthenticationFailed('Invalid username or password.')
+
+        data['user'] = user
+        return data
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -80,6 +87,12 @@ class UpdatePasswordSerializer(serializers.Serializer):
             raise ValidationError('Password is incorrect')
         return old_password
 
+    def validate_new_password(self, new_password: str) -> str:
+        """Метод проверяет, отличается ли новый пароль от старого"""
+        if self.instance.check_password(new_password):
+            raise serializers.ValidationError('New password must be different from the old one.')
+        return new_password
+
     def create(self, validated_data) -> User:
         raise NotImplementedError
 
@@ -88,3 +101,36 @@ class UpdatePasswordSerializer(serializers.Serializer):
         instance.set_password(validated_data['new_password'])
         instance.save(update_fields=('password',))
         return instance
+
+
+class FriendSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Friend"""
+    friend_username = serializers.ReadOnlyField(source='friend.username')
+    friend_email = serializers.ReadOnlyField(source='friend.email')
+
+    class Meta:
+        model = User
+        fields = ['id', 'friend_username', 'friend_email', 'created_at']
+
+
+class FriendRequestSerializer(serializers.ModelSerializer):
+    """ Сериализатор для модели FriendRequest"""
+
+    class Meta:
+        model = FriendRequest
+        fields = '__all__'
+
+
+class UserSerializer(serializers.ModelSerializer):
+    friends = FriendSerializer(many=True, read_only=True)
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'friends', 'url']
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return None
+        return request.build_absolute_uri(reverse('user-detail', args=[obj.id]))
