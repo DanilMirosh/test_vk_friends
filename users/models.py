@@ -3,31 +3,55 @@ from django.db import models
 
 
 class User(AbstractUser):
-    friends = models.ManyToManyField('self', blank=True)
-    friend_requests = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='requests')
+    """Модель пользователя"""
 
-    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = []
+    class Meta:
+        """Мета-класс для корректного отображения полей пользователя в админ панели"""
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+        # Добавим сортировку по полям
+        ordering = ('username',)
+
+
+class Friendship(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected')
+    )
+    """Модель дружбы"""
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship_initiator')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship_receiver')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+
+    class Meta:
+        # unique_together = ('from_user', 'to_user')
+        indexes = [
+            models.Index(fields=['from_user', 'to_user'])
+        ]
 
     def __str__(self):
-        return self.username
+        return f'{self.from_user.username} - {self.to_user.username}'
 
 
 class FriendRequest(models.Model):
-    PENDING = 'pending'
-    ACCEPTED = 'accepted'
-    REJECTED = 'rejected'
-    STATUS_CHOICES = [
-        (PENDING, 'Pending'),
-        (ACCEPTED, 'Accepted'),
-        (REJECTED, 'Rejected'),
-    ]
-
-    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests_sent')
-    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests_received')
-    message = models.CharField(max_length=200, blank=True)
+    """Модель заявки в друзья"""
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_friend_requests')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_friend_requests')
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
+    status = models.IntegerField(choices=Friendship.STATUS_CHOICES, default=Friendship.STATUS_CHOICES[0][0])
 
-    def __str__(self):
-        return f"From {self.from_user} to {self.to_user} ({self.status})"
+    class Meta:
+        unique_together = ('from_user', 'to_user')
+
+    def accept(self):
+        """Метод для принятия заявки в друзья"""
+        from_user = self.from_user
+        to_user = self.to_user
+        Friendship.objects.create(user=from_user, to_user=to_user, status='accepted')
+        Friendship.objects.create(user=to_user, to_user=from_user, status='accepted')
+        self.delete()
+
+    def reject(self):
+        """Метод для отклонения заявки в друзья"""
+        self.delete()
