@@ -24,3 +24,31 @@
 -исходный код
 -OpenAPI спецификация
 - документация с описанием запуска и примерами использования API
+
+## Используемые технологии
+- Python 3.11 
+- Django 4.2
+
+Подготовка к запуску проекта
+Клонируйте проект с помощью git clone или скачайте ZIP-архив. Установите и активируйте виртуальное окружение
+
+python -m venv venv
+
+Установите зависимости из файла requirements.txt
+
+pip install -r requirements.txt
+
+Применить миграции
+
+python manage.py makemigrations
+python manage.py migrate
+
+Создайте суперпользователя:
+
+python manage.py createsuperuser
+
+Запустить проект:
+
+python manage.py runserver
+
+Перейдите на страницу http://127.0.0.1:8000/ 
