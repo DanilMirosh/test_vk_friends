@@ -1,0 +1,35 @@
+version: '3.3'
+services:
+  db:
+    image: postgres:latest
+    container_name: database
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    # ports:
+    #   - "127.0.0.1:5432:5432"   # uncomment if django app is running locally
+
+  web:
+    restart: always
+    build:
+      context: ./friendship
+      dockerfile: Dockerfile
+    container_name: web
+    depends_on:
+      - db
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+
+
+volumes:
+  postgres_data:
