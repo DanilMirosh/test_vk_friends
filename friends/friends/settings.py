@@ -26,8 +26,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     # 'django.contrib.staticfiles',
 
-    'user',
-    'friendship_service',
+    'users',
+    'friendship',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,441 @@
+openapi: 3.0.2
+info:
+  title: Friendship Service API
+  version: 1.0.0
+  description: Сервис, в котором можно добавлять в друзья.
+paths:
+  /api/v1/users:
+    get:
+      operationId: user_views_get_all_users
+      summary: Get All Users
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                title: Response
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSchema'
+      description: Получить всех зарегистрированных пользователей
+      tags:
+        - user
+  /api/v1/users/{username}:
+    get:
+      operationId: user_views_get_specific_user_by_nickname
+      summary: Get Specific User By Nickname
+      parameters:
+        - in: path
+          name: username
+          schema:
+            title: Username
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSchema'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Получить конкретного пользователя по имени
+      tags:
+        - user
+  /api/v1/users/id/{user_id}:
+    get:
+      operationId: user_views_get_specific_user_by_id
+      summary: Get Specific User By Id
+      parameters:
+        - in: path
+          name: user_id
+          schema:
+            title: User Id
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSchema'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Получить конкретного пользователя по uuid
+      tags:
+        - user
+  /api/v1/auth/register:
+    post:
+      operationId: auth_views_register_new_user
+      summary: Register New User
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSchema'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: >-
+        Регистрация нового юзера по логину и паролю.
+
+        Логин должен быть до 24 символов и может содержать только латинские
+        буквы и цифры.
+      tags:
+        - auth
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              title: FormParams
+              type: object
+              properties:
+                username:
+                  title: Username
+                  type: string
+                password:
+                  title: Password
+                  type: string
+              required:
+                - username
+                - password
+        required: true
+  /api/v1/auth/login:
+    post:
+      operationId: auth_views_login
+      summary: Login
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenSchema'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Получить access token
+      tags:
+        - auth
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              title: FormParams
+              type: object
+              properties:
+                username:
+                  title: Username
+                  type: string
+                password:
+                  title: Password
+                  type: string
+              required:
+                - username
+                - password
+        required: true
+  /api/v1/auth/whoami:
+    get:
+      operationId: auth_views_get_my_nickname
+      summary: Get My Nickname
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSchema'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Получить пользователя по токену
+      tags:
+        - auth
+      security:
+        - AuthBearer: []
+  /api/v1/friends/myfriends:
+    get:
+      operationId: friendship_service_views_get_my_friends
+      summary: Get My Friends
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                title: Response
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSchema'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Получить список своих друзей
+      tags:
+        - friends
+      security:
+        - AuthBearer: []
+  /api/v1/friends/requests:
+    get:
+      operationId: friendship_service_views_get_requests
+      summary: Get Incoming And Outgoing Requests
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendshipRequestsSchema'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Получить входящие и исходящие заявки
+      tags:
+        - friends
+      security:
+        - AuthBearer: []
+  /api/v1/friends/{user_id}/all:
+    get:
+      operationId: friendship_service_views_get_user_friends_by_id
+      summary: Get User's Friends By His Id
+      parameters:
+        - in: path
+          name: user_id
+          schema:
+            title: User Id
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                title: Response
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSchema'
+      description: Получить друзей пользователя user_id
+      tags:
+        - friends
+  /api/v1/friends/{user_id}/status:
+    get:
+      operationId: friendship_service_views_get_friendship_status_by_id
+      summary: Get Friendship Status With Another User By His Id
+      parameters:
+        - in: path
+          name: user_id
+          schema:
+            title: User Id
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendshipStatusSchema'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Получить статус дружбы с пользователем user_id
+      tags:
+        - friends
+      security:
+        - AuthBearer: []
+  /api/v1/friends/{user_id}/add:
+    post:
+      operationId: friendship_service_views_add_friend_by_id
+      summary: Add Friend By Id
+      parameters:
+        - in: path
+          name: user_id
+          schema:
+            title: User Id
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: Добавить пользователя user_id в друзья
+      tags:
+        - friends
+      security:
+        - AuthBearer: []
+  /api/v1/friends/{user_id}/remove:
+    post:
+      operationId: friendship_service_views_remove_friend_by_id
+      summary: Remove Friend By Id
+      parameters:
+        - in: path
+          name: user_id
+          schema:
+            title: User Id
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      description: >-
+        Удалить пользователя user_id из друзей/отменить исходящую заявку в
+        друзья.
+      tags:
+        - friends
+      security:
+        - AuthBearer: []
+components:
+  schemas:
+    UserSchema:
+      title: UserSchema
+      type: object
+      properties:
+        username:
+          title: Username
+          default: SomeUsername
+          type: string
+        id:
+          title: Id
+          type: string
+          format: uuid
+      required:
+        - id
+    Message:
+      title: Message
+      type: object
+      properties:
+        detail:
+          title: Detail
+          default: Example message
+          type: string
+    TokenSchema:
+      title: TokenSchema
+      type: object
+      properties:
+        access_token:
+          title: Access Token
+          default: some.bearer.token
+          type: string
+        expires:
+          title: Expires
+          type: string
+          format: date-time
+        token_type:
+          title: Token Type
+          default: type
+          type: string
+      required:
+        - expires
+    FriendshipRequestsSchema:
+      title: FriendshipRequestsSchema
+      type: object
+      properties:
+        incoming:
+          title: Incoming
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSchema'
+        outgoing:
+          title: Outgoing
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSchema'
+      required:
+        - incoming
+        - outgoing
+    FriendshipStatusSchema:
+      title: FriendshipStatusSchema
+      description: 'Статусы дружбы: none/outgoing/incoming/friends'
+      type: object
+      properties:
+        status:
+          title: Status
+          type: string
+      required:
+        - status
+  securitySchemes:
+    AuthBearer:
+      type: http
+      scheme: bearer
