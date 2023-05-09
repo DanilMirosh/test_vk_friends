@@ -15,7 +15,7 @@ user = Router(tags=["user"])
 @user.get('', response=List[UserSchema])
 def get_all_users(request):
     """
-    Получить всех зарегестрированных пользователей
+    Получить всех зарегистрированных пользователей
     """
     return User.objects.all()
 
@@ -23,7 +23,7 @@ def get_all_users(request):
 @user.get('/{username}', response={200: Optional[UserSchema], 404: Message})
 def get_specific_user_by_nickname(request, username: str):
     """
-    Получить конкретного пользователя (ник, айди) по нику
+    Получить конкретного пользователя по username
     """
     return get_object_or_404(User, username=username)
 
@@ -31,6 +31,6 @@ def get_specific_user_by_nickname(request, username: str):
 @user.get('/id/{user_id}', response={200: Optional[UserSchema], 404: Message})
 def get_specific_user_by_id(request, user_id: UUID):
     """
-    Получить конкретного пользователя (ник, айди) по uuid
+    Получить конкретного пользователя по uuid
     """
     return get_object_or_404(User, id=user_id)
