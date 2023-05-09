@@ -49,7 +49,7 @@ class LoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'password')
-        read_only_fields = ('id', 'first_name')
+        read_only_fields = ('id', 'username')
 
     def create(self, validated_data: dict) -> User:
         """Метод проводит аутентификацию пользователя"""
@@ -101,11 +101,13 @@ class UserFriendshipSerializer(serializers.ModelSerializer):
 
 class FriendRequestSerializer(serializers.ModelSerializer):
     """Сериализатор для создания запроса на добавление в друзья"""
-    to_user = serializers.CharField()
+    from_user = serializers.ReadOnlyField(source='from_user.username')
+    to_user = serializers.ReadOnlyField(source='to_user.username')
 
     class Meta:
         model = Friendship
-        fields = ('to_user',)
+        fields = ['id', 'from_user', 'to_user', 'status']
+        read_only_fields = ['id', 'from_user', 'to_user', 'status']
 
     def create(self, validated_data):
         to_user = get_user_model().objects.get(username=validated_data['to_user'])

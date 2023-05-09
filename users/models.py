@@ -20,12 +20,11 @@ class Friendship(models.Model):
         ('rejected', 'Rejected')
     )
     """Модель дружбы"""
-    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship_initiator')
-    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship_receiver')
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='initiated_friendships')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_friendships')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
 
     class Meta:
-        # unique_together = ('from_user', 'to_user')
         indexes = [
             models.Index(fields=['from_user', 'to_user'])
         ]
@@ -48,8 +47,8 @@ class FriendRequest(models.Model):
         """Метод для принятия заявки в друзья"""
         from_user = self.from_user
         to_user = self.to_user
-        Friendship.objects.create(user=from_user, to_user=to_user, status='accepted')
-        Friendship.objects.create(user=to_user, to_user=from_user, status='accepted')
+        Friendship.objects.create(from_user=from_user, to_user=to_user, status='accepted')
+        Friendship.objects.create(from_user=to_user, to_user=from_user, status='accepted')
         self.delete()
 
     def reject(self):

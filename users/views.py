@@ -2,8 +2,8 @@ from django.contrib.auth import login, logout
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-
 from .models import User, Friendship
 from .serializers import (CreateUserSerializer, LoginSerializer, ProfileSerializer, UpdatePasswordSerializer,
                           UserFriendshipSerializer, FriendRequestSerializer, FriendStatusSerializer,
@@ -11,7 +11,7 @@ from .serializers import (CreateUserSerializer, LoginSerializer, ProfileSerializ
 
 
 class SignupView(generics.CreateAPIView):
-    """Ручка для регистрации нового пользователя"""
+    """Представление для регистрации нового пользователя"""
     serializer_class = CreateUserSerializer
 
 
@@ -28,7 +28,7 @@ class LoginView(generics.CreateAPIView):
 
 
 class ProfileView(generics.RetrieveUpdateDestroyAPIView):
-    """Ручка для отображения, редактирования и выхода пользователя"""
+    """Представление для отображения, редактирования и выхода пользователя"""
     queryset = User.objects.all()
     serializer_class = ProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -43,13 +43,45 @@ class ProfileView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class UpdatePasswordView(generics.UpdateAPIView):
-    """Ручка для смены пароля пользователя"""
+    """Представление для смены пароля пользователя"""
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UpdatePasswordSerializer
 
     def get_object(self):
         """Метод возвращает объект пользователя из БД"""
         return self.request.user
+
+
+class FriendRequestView(generics.ListCreateAPIView):
+    """Представление для создания и просмотра заявок в друзья"""
+    serializer_class = FriendRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Получение списка заявок в друзья пользователя"""
+        return Friendship.objects.filter(
+            to_user=self.request.user, status=Friendship.STATUS_CHOICES[0]
+        ).select_related('from_user', 'to_user')
+
+    def perform_create(self, serializer):
+        """Создание заявки в друзья"""
+        to_user = get_object_or_404(User, username=self.request.data['to_user'])
+
+        # Проверяем, существует ли уже заявка в обоих направлениях
+        friendship_1 = Friendship.objects.filter(from_user=self.request.user, to_user=to_user).first()
+        if friendship_1 is not None:
+            serializer.instance = friendship_1
+            return
+
+        friendship_2 = Friendship.objects.filter(from_user=to_user, to_user=self.request.user).first()
+        if friendship_2 is not None:
+            serializer.instance = friendship_2
+            return
+
+        # Если заявки не существует, то создаем ее
+        friendship_1 = Friendship.objects.create(from_user=self.request.user, to_user=to_user,
+                                                 status=Friendship.STATUS_CHOICES[0])
+        serializer.instance = friendship_1
 
 
 class UserFriendshipView(generics.ListAPIView):
@@ -61,88 +93,74 @@ class UserFriendshipView(generics.ListAPIView):
         """Получение списка друзей пользователя"""
         return Friendship.objects.filter(
             Q(from_user=self.request.user) | Q(to_user=self.request.user),
-            status='accepted'
-        ).select_related('to_user')
-
-
-class FriendRequestView(generics.ListCreateAPIView):
-    """Представление для создания и просмотра заявок в друзья"""
-    serializer_class = FriendRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        """Получение списка заявок в друзья пользователя"""
-        return Friendship.objects.filter(
-            to_user=self.request.user, status=Friendship.STATUS_CHOICES
-        ).select_related('from_user', 'to_user')
-
-    def perform_create(self, serializer):
-        """Создание заявки в друзья"""
-        to_user = get_object_or_404(User, username=self.request.data['to_user'])
-        friendship_1 = Friendship.objects.create(from_user=self.request.user, to_user=to_user, status=Friendship.STATUS_CHOICES)
-        friendship_2 = Friendship.objects.create(from_user=to_user, to_user=self.request.user, status=Friendship.STATUS_CHOICES)
-        friendship_1.save()
-        friendship_2.save()
-        serializer.instance = friendship_1
+            status=Friendship.STATUS_CHOICES[1]
+        )
 
 
 class FriendRequestDetailView(generics.UpdateAPIView):
     """Представление для принятия или отклонения заявки в друзья"""
+
     serializer_class = FriendStatusSerializer
     permission_classes = [permissions.IsAuthenticated]
-    lookup_url_kwarg = 'username'
 
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
+    def get_object(self, queryset=None):
+        username = self.kwargs.get('username')
+        return get_object_or_404(User, username=username)
 
-    def get_object(self):
-        """Получение объекта заявки в друзья"""
-        from_user = get_object_or_404(User, username=self.kwargs['username'])
-        to_user = get_object_or_404(User, username=self.request.data.get('to_user'))
-        friendship = get_object_or_404(
-            Friendship, from_user=from_user, to_user=to_user, status=Friendship.STATUS_CHOICES[0]
-        )
-        return friendship
-
-    def check_friendship(self, from_user, to_user):
-        """Проверка, что пользователи не являются уже друзьями"""
-        if Friendship.objects.filter(
-                from_user=from_user,
-                to_user=to_user,
-                status=Friendship.STATUS_CHOICES[1]
-        ).exists():
-            return Response({'detail': 'Пользователи уже друзья'}, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request, *args, **kwargs):
+    def patch(self, request, *args, **kwargs):
         """Принятие или отклонение заявки в друзья"""
-        friendship = self.get_object()
-        self.check_friendship(friendship.from_user, friendship.to_user)
+        friend = self.get_object()
+        friendship = get_object_or_404(Friendship, from_user=friend, to_user=request.user,
+                                       status=Friendship.STATUS_CHOICES[0])
 
         serializer = self.get_serializer(friendship, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
         if friendship.status == Friendship.STATUS_CHOICES[1]:
-            if Friendship.objects.filter(
-                    from_user=friendship.to_user,
-                    to_user=friendship.from_user,
-                    status=Friendship.STATUS_CHOICES[1]
-            ).exists():
-                return Response
+            if Friendship.objects.filter(from_user=friend, to_user=request.user,
+                                         status=Friendship.STATUS_CHOICES[1]).exists():
+                return Response({'detail': 'Заявка в друзья уже отправлена и принята'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def check_object_permissions(self, request, obj):
+        """Проверка, что пользователи не являются уже друзьями"""
+        if Friendship.objects.filter(from_user=request.user, to_user=obj, status=Friendship.STATUS_CHOICES[1]).exists():
+            raise ValidationError({'detail': 'Пользователи уже друзья'})
+
 
 class FriendshipDetailView(generics.DestroyAPIView):
-    """Представление для удаления дружбы"""
+    """
+    Представление для удаления дружбы. При удалении дружбы создаются новые записи в таблице Friendship,
+    чтобы пользователи могли отправлять друг другу новые заявки в друзья.
+    """
     serializer_class = FriendshipSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        """Получение объекта дружбы"""
+        """
+        Получение объекта дружбы. Должен вернуть объект дружбы со статусом "друзья" между текущим пользователем
+        и пользователем, имя которого передано в URL.
+        """
         friendship = get_object_or_404(Friendship, from_user=self.request.user,
-                                       to_user__username=self.kwargs['username'], status=Friendship.STATUS_CHOICES)
+                                       to_user__username=self.kwargs['username'], status=Friendship.STATUS_CHOICES[1])
         return friendship
 
     def delete(self, request, *args, **kwargs):
+        """
+        Удаление дружбы. Сначала меняем статус дружбы на "не друзья", а затем создаем новую запись в таблице
+        Friendship, чтобы пользователи могли отправлять друг другу новые заявки в друзья.
+        """
         friendship = self.get_object()
-        friendship.status = Friendship.STATUS_CHOICES
+        friendship.status = Friendship.STATUS_CHOICES[0]
         friendship.save()
+
+        # Создаем новую запись в таблице Friendship, чтобы пользователи могли отправлять друг другу новые заявки в друзья.
+        new_friendship = Friendship(from_user=friendship.from_user, to_user=friendship.to_user)
+        new_friendship.save()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
