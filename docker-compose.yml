@@ -14,7 +14,7 @@ services:
   web:
     restart: always
     build:
-      context: ./friendship
+      context: ./friends
       dockerfile: Dockerfile
     container_name: web
     depends_on:
